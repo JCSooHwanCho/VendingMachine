@@ -15,13 +15,6 @@ class ViewController: UIViewController {
             case .fanta: return "환타"
             }
         }
-        func productCode() -> Int{
-            switch self {
-            case .cola: return 0
-            case .cider: return 1
-            case .fanta: return 2
-            }
-        }
     }
 
     enum Input {
@@ -43,9 +36,15 @@ class ViewController: UIViewController {
 
     struct State {
         let money: Int
-        var stock: [Int]
+        var stock: [Product:Int]
         static func initial() -> State {
-            return State(money: 0,stock:[10,10,10])
+            var P:[Product:Int] = [:]
+            
+            P[Product.cola] = 10
+            P[Product.cider] = 10
+            P[Product.fanta] = 10
+            
+            return State(money: 0,stock:P)
         }
     }
 
@@ -85,13 +84,13 @@ class ViewController: UIViewController {
         handleProcess("reset")
     }
     @IBAction func addCola(_ sender: Any) {
-        handleProcess("add cola")
+        handleProcess("addCola")
     }
     @IBAction func addCider(_ sender: Any) {
-        handleProcess("add cider")
+        handleProcess("addCider")
     }
     @IBAction func addFanta(_ sender: Any) {
-        handleProcess("add fanta")
+        handleProcess("addFanta")
     }
     // MARK: - LOGIC
 
@@ -114,9 +113,9 @@ class ViewController: UIViewController {
             case "cider": return .productSelect(.cider)
             case "fanta": return .productSelect(.fanta)
             case "reset": return .reset
-            case "add cola": return .add(.cola, 1)
-            case "add cider": return .add(.cider,1)
-            case "add fanta": return .add(.fanta,1)
+            case "addCola": return .add(.cola, 1)
+            case "addCider": return .add(.cider,1)
+            case "addFanta": return .add(.fanta,1)
             default: return .none
             }
         }
@@ -178,14 +177,14 @@ class ViewController: UIViewController {
                     out(.shortMoneyError)
                     return state
                 }
-                if state.stock[p.productCode()] <= 0{
+                if state.stock[p]! <= 0{
                     out(.runOutOfDrinkError)
                     return state
                 }
                 let money = state.money - p.rawValue
-                let drinkStock = state.stock[p.productCode()] - 1
+                let drinkStock = state.stock[p]! - 1
                 var stock = state.stock
-                stock[p.productCode()] = drinkStock
+                stock[p] = drinkStock
                 out(.productOut(p,drinkStock))
                 out(.displayMoney(money))
                 return State(money: money,stock: stock)
@@ -198,9 +197,9 @@ class ViewController: UIViewController {
             case .none:
                 return state
             case .add(let p, let n):
-                let drinkStock = state.stock[p.productCode()]+n
+                let drinkStock = state.stock[p]! + n
                 var stock = state.stock
-                stock[p.productCode()] = drinkStock
+                stock[p] = drinkStock
                 out(.stockAdded(p, n))
                 return State(money:state.money,stock:stock)
                 

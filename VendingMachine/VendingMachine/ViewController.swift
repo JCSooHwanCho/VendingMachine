@@ -15,26 +15,37 @@ class ViewController: UIViewController {
             case .fanta: return "환타"
             }
         }
+        func productCode() -> Int{
+            switch self {
+            case .cola: return 0
+            case .cider: return 1
+            case .fanta: return 2
+            }
+        }
     }
 
     enum Input {
         case moneyInput(Int)
         case productSelect(Product)
+        case add(Product,Int)
         case reset
         case none
     }
 
     enum Output {
         case displayMoney(Int)
-        case productOut(Product)
+        case productOut(Product,Int)
         case shortMoneyError
+        case runOutOfDrinkError
+        case stockAdded(Product,Int)
         case change(Int)
     }
 
     struct State {
         let money: Int
+        var stock: [Int]
         static func initial() -> State {
-            return State(money: 0)
+            return State(money: 0,stock:[10,10,10])
         }
     }
 
@@ -73,7 +84,15 @@ class ViewController: UIViewController {
     @IBAction func reset(_ sender: Any) {
         handleProcess("reset")
     }
-
+    @IBAction func addCola(_ sender: Any) {
+        handleProcess("add cola")
+    }
+    @IBAction func addCider(_ sender: Any) {
+        handleProcess("add cider")
+    }
+    @IBAction func addFanta(_ sender: Any) {
+        handleProcess("add fanta")
+    }
     // MARK: - LOGIC
 
     lazy var handleProcess = processHandler(State.initial())
@@ -95,6 +114,9 @@ class ViewController: UIViewController {
             case "cider": return .productSelect(.cider)
             case "fanta": return .productSelect(.fanta)
             case "reset": return .reset
+            case "add cola": return .add(.cola, 1)
+            case "add cider": return .add(.cider,1)
+            case "add fanta": return .add(.fanta,1)
             default: return .none
             }
         }
@@ -105,7 +127,7 @@ class ViewController: UIViewController {
         case .displayMoney(let m):
             displayMoney.text = "\(m)"
 
-        case .productOut(let p):
+        case .productOut(let p,let n):
             switch p {
             case .cola:
                 productOut.image = #imageLiteral(resourceName: "cola_l")
@@ -114,8 +136,10 @@ class ViewController: UIViewController {
             case .fanta:
                 productOut.image = #imageLiteral(resourceName: "fanta_l")
             }
+            textInfo.text = "\(p.name())가 \(n)개 남았습니다."
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 self.productOut.image = nil
+                self.textInfo.text = ""
             }
 
         case .shortMoneyError:
@@ -129,6 +153,13 @@ class ViewController: UIViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 self.textInfo.text = ""
             }
+        case .runOutOfDrinkError:
+            textInfo.text = "해당 음료수가 다 떨어졌습니다."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                self.textInfo.text = ""
+            }
+        case .stockAdded(let p,let n):
+            textInfo.text = "\(p.name())가 \(n)개 추가되었습니다."
         }
     }
 
@@ -140,25 +171,39 @@ class ViewController: UIViewController {
             case .moneyInput(let m):
                 let money = state.money + m
                 out(.displayMoney(money))
-                return State(money: money)
+                return State(money: money,stock:state.stock)
 
             case .productSelect(let p):
                 if state.money < p.rawValue {
                     out(.shortMoneyError)
                     return state
                 }
-                out(.productOut(p))
+                if state.stock[p.productCode()] <= 0{
+                    out(.runOutOfDrinkError)
+                    return state
+                }
                 let money = state.money - p.rawValue
+                let drinkStock = state.stock[p.productCode()] - 1
+                var stock = state.stock
+                stock[p.productCode()] = drinkStock
+                out(.productOut(p,drinkStock))
                 out(.displayMoney(money))
-                return State(money: money)
+                return State(money: money,stock: stock)
 
             case .reset:
                 out(.change(state.money))
                 out(.displayMoney(0))
-                return State(money: 0)
+                return State(money: 0,stock:state.stock)
 
             case .none:
                 return state
+            case .add(let p, let n):
+                let drinkStock = state.stock[p.productCode()]+n
+                var stock = state.stock
+                stock[p.productCode()] = drinkStock
+                out(.stockAdded(p, n))
+                return State(money:state.money,stock:stock)
+                
             }
         }
     }
